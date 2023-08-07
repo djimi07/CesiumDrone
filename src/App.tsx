@@ -1,93 +1,79 @@
-  
 
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 
 import './App.css'
 
-import {  Cartesian3, UrlTemplateImageryProvider, Credit, WebMapServiceImageryProvider, Viewer, ImageryLayer, DefaultProxy } from "cesium";
+import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef} from "resium";
+import { Cartesian3, UrlTemplateImageryProvider, Credit, OpenStreetMapImageryProvider, Viewer as CesiumViewer,WebMapServiceImageryProvider, ImageryLayer as ImageryLayerCesium } from "cesium";
 import * as mqtt from 'mqtt';
-import MenuBar from './Components/MenuBar';
-import Cookies from 'js-cookie';
+import OvenPlayer from 'ovenplayer';
 
 //import OvenPlayer from 'ovenplayer';
 
 function App() {
+
+  //Cesium config
+  const ref = useRef<CesiumComponentRef<CesiumViewer>>(null);
+
+  const [url, setUrl] = useState<any>('UrlTemplatemageryProvider');
+
+  const imageryProvider = useMemo(() => {
   
-  const [entities, setEntities] = useState<any>([]);
-  const [viewer, setViewer] = useState<any>();
-
-  //const [selectedImagery, setSelectedImagery] = useState<any>('UrlTemplateImageryProvider');
-  
-  const imageryList:string[] = [
-    'UrlTemplateImageryProvider',
-    'WebMapServiceImageryProvider'
-  ];
-
-  function addImagery()
-  {
-
-    const m_mono:any = new WebMapServiceImageryProvider({
-      url : 'https://sampleserver1.arcgisonline.com/ArcGIS/services/Specialty/ESRI_StatesCitiesRivers_USA/MapServer/WMSServer',
-      layers : '0'
-    });
-
-    const imageryLayer =  ImageryLayer.fromProviderAsync(m_mono, {});
-  
-
-  viewer.imageryLayers.removeAll();
-
-  }
-
-  useEffect(()=>{
-
-    if (document.querySelector('.cesium-viewer') == null)
-    {
-      const m_mono:any = new UrlTemplateImageryProvider({
-        url: 'https://tile.mierune.co.jp/mierune_mono/{z}/{x}/{y}.png',
-        credit: new Credit(
-            "Maptiles by <a href='http://mierune.co.jp' target='_blank'>MIERUNE</a>, under CC BY. Data by <a href='http://osm.org/copyright' target='_blank'>OpenStreetMap</a> contributors, under ODbL."
-        ),
-      });
-  
-      const viewerInstance = new Viewer('map', {
-          baseLayerPicker: false,
-          geocoder: false,
-          homeButton: false,
-          timeline: false,
-          animation: false,
-          baseLayer: ImageryLayer.fromProviderAsync(m_mono,{}),
-          
-      })
-  
-      viewerInstance.camera.flyTo({
-        destination: Cartesian3.fromDegrees(139.5, 33.0, 100000.0),
-        orientation: {
-            pitch: -0.3,
-            roll: -0.25,
-        },
-      });
-
-      setViewer(viewerInstance);
-
+      if (url == 'UrlTemplatemageryProvider')
+      {
+          return new UrlTemplateImageryProvider({
+              url: 'https://tile.mierune.co.jp/mierune_mono/{z}/{x}/{y}.png',
+              credit: new Credit("Maptiles by <a href='http://mierune.co.jp' target='_blank'>MIERUNE</a>, under CC BY. Data by <a href='http://osm.org/copyright' target='_blank'>OpenStreetMap</a> contributors, under ODbL.")
+          })
       }
-    
-}, []);
+      else
+      {
+        return  new OpenStreetMapImageryProvider({
+          url: "https://tile.openstreetmap.org/"
+        })
+      }
+  
+  },
 
+  [url]);
+
+  const position = Cartesian3.fromDegrees(139.5, 33.0, 100000.0);
+
+  const orientation = { 
+      pitch: -0.3,
+      roll:-0.25 
+  };
+
+
+function changeLayer()
+{
+  //ref.current?.cesiumElement?.imageryLayers.removeAll();
+  const viewer = ref.current?.cesiumElement;
+
+  viewer?.imageryLayers.removeAll();
+
+
+  const imageryLayer = new ImageryLayerCesium(new OpenStreetMapImageryProvider({
+    url: "https://tile.openstreetmap.org/"
+  }), {})
+
+  viewer?.imageryLayers.add(imageryLayer);
+
+}
 
   return (<>
 
-        <MenuBar imageryList={imageryList}  addImagery={addImagery}/>
+    <Viewer ref={ref}  onClick={()=>changeLayer()} full baseLayerPicker={false} geocoder={false} homeButton={false} timeline={false} animation={false}>
+        <ImageryLayer imageryProvider={imageryProvider}/> 
+        <CameraFlyTo destination={position} orientation={orientation}/>
+    </Viewer>
 
-        <MqttComponent entities={entities} setEntities={setEntities}/> 
-        {/*<OvenPlayerComponent/>*/}
+    {/* <MqttComponent/> */}
+    {/*<OvenPlayerComponent/>*/}
     </>
-    
   )
 }
-
-
-
 
 
 
