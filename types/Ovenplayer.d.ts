@@ -1,7 +1,7 @@
 // Overwrite original d.ts of ovenplayer 
 // Extension
 
-declare module 'ovenplayer' {
+/* declare module 'ovenplayer' {
 
     interface OvenPlayer {
         debug(debug: boolean): boolean;
@@ -126,10 +126,10 @@ declare module 'ovenplayer' {
 
 
 // In case you want to disable types checking of ovenplayer disable comment of this following code block and comment or remove the top code block
+*/
 
-/*
+
 declare module "ovenplayer" {
     const OvenPlayer: any;
     export = OvenPlayer;
 }
-*/

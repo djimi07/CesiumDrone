@@ -1,16 +1,16 @@
 import * as Menubar from '@radix-ui/react-menubar';
+import { useState } from 'react'
 //import { ChevronRightIcon} from '@radix-ui/react-icons';
 //import { useState, useEffect } from 'react'
-import Cookies from 'js-cookie';
 
 function MenuBar(props:any)
 {
-
-    //const [selectedLayer, setSelectedLayer] = useState<any>();
+    const [selectedLayer, setSelectedLayer] = useState<any>('');
 
     function changeImagery(imagery:string)
     {
-        props.setSelectedImagery(imagery)
+        setSelectedLayer(imagery)
+        props.changeLayer(imagery)
     }
 
     return <Menubar.Root className="MenubarRoot menu_bar">
@@ -20,7 +20,7 @@ function MenuBar(props:any)
         <Menubar.Portal>
           <Menubar.Content className="MenubarContent" align="start" sideOffset={5} alignOffset={-3}>
             {props.imageryList.map((imagery:string, i:number) => {
-                return <Menubar.Item key={i} onClick={()=>props.addImagery()} className={"MenubarItem item_title " + ((props.ImageryLayer == imagery) ? 'selected' : '')}>
+                return <Menubar.Item key={i} onClick={()=>changeImagery(imagery)} className={"MenubarItem item_title " + ((selectedLayer == imagery) ? 'selected' : '')}>
                     {imagery}
                 </Menubar.Item>
             })}

@@ -1,76 +1,107 @@
 
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import {  useRef, useState, useEffect } from 'react'
 
 import './App.css'
 
-import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef} from "resium";
-import { Cartesian3, UrlTemplateImageryProvider, Credit, OpenStreetMapImageryProvider, Viewer as CesiumViewer,WebMapServiceImageryProvider, ImageryLayer as ImageryLayerCesium } from "cesium";
+import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef, Entity, CustomDataSource} from "resium";
+import { Cartesian3, UrlTemplateImageryProvider, Credit, Color, OpenStreetMapImageryProvider, Viewer as CesiumViewer, ImageryLayer as ImageryLayerCesium } from "cesium";
 import * as mqtt from 'mqtt';
 import OvenPlayer from 'ovenplayer';
-
-//import OvenPlayer from 'ovenplayer';
+import MenuBar from './Components/MenuBar';
 
 function App() {
 
-  //Cesium config
+  //Cesium Viewer instance captured here
   const ref = useRef<CesiumComponentRef<CesiumViewer>>(null);
 
-  const [url, setUrl] = useState<any>('UrlTemplatemageryProvider');
+  //Save entities here (drones)
+  const [entities, setEntities] = useState<any>([]);
 
-  const imageryProvider = useMemo(() => {
+  //List of tagged layers (use identifiers of your choice)
+  const imageryList:string[] = [
+    'layer1',
+    'layer2'
+  ]
+
+  //Initiate default Layer
+  const imageryProvider = new UrlTemplateImageryProvider({
+    url: 'https://tile.mierune.co.jp/mierune_mono/{z}/{x}/{y}.png',
+    credit: new Credit("Maptiles by <a href='http://mierune.co.jp' target='_blank'>MIERUNE</a>, under CC BY. Data by <a href='http://osm.org/copyright' target='_blank'>OpenStreetMap</a> contributors, under ODbL.")
+  });
   
-      if (url == 'UrlTemplatemageryProvider')
-      {
-          return new UrlTemplateImageryProvider({
-              url: 'https://tile.mierune.co.jp/mierune_mono/{z}/{x}/{y}.png',
-              credit: new Credit("Maptiles by <a href='http://mierune.co.jp' target='_blank'>MIERUNE</a>, under CC BY. Data by <a href='http://osm.org/copyright' target='_blank'>OpenStreetMap</a> contributors, under ODbL.")
-          })
-      }
-      else
-      {
-        return  new OpenStreetMapImageryProvider({
-          url: "https://tile.openstreetmap.org/"
-        })
-      }
-  
-  },
-
-  [url]);
-
   const position = Cartesian3.fromDegrees(139.5, 33.0, 100000.0);
 
   const orientation = { 
       pitch: -0.3,
       roll:-0.25 
   };
+  //----------------------//
 
-
-function changeLayer()
+//Function callback that handle layer changing
+function changeLayer(layer:string)
 {
-  //ref.current?.cesiumElement?.imageryLayers.removeAll();
   const viewer = ref.current?.cesiumElement;
 
   viewer?.imageryLayers.removeAll();
 
+  switch (layer) {
 
-  const imageryLayer = new ImageryLayerCesium(new OpenStreetMapImageryProvider({
-    url: "https://tile.openstreetmap.org/"
-  }), {})
+    case 'layer1':{
+      const imageryProvider = new UrlTemplateImageryProvider({
+        url: 'https://tile.mierune.co.jp/mierune_mono/{z}/{x}/{y}.png',
+        credit: new Credit("Maptiles by <a href='http://mierune.co.jp' target='_blank'>MIERUNE</a>, under CC BY. Data by <a href='http://osm.org/copyright' target='_blank'>OpenStreetMap</a> contributors, under ODbL.")
+      });
+    
+        viewer?.imageryLayers.addImageryProvider(imageryProvider)
+      break;
+    }
 
-  viewer?.imageryLayers.add(imageryLayer);
+    case 'layer2':{
+        const imageryLayer = new ImageryLayerCesium(new OpenStreetMapImageryProvider({
+            url: "https://tile.openstreetmap.org/"
+        }), {})
 
+    viewer?.imageryLayers.add(imageryLayer);
+      break;
+    }
+  
+    default:
+      break;
+  }
 }
+console.log(entities)
 
   return (<>
 
-    <Viewer ref={ref}  onClick={()=>changeLayer()} full baseLayerPicker={false} geocoder={false} homeButton={false} timeline={false} animation={false}>
+    <Viewer ref={ref} full baseLayerPicker={false} geocoder={false} homeButton={false} timeline={false} animation={false}>
         <ImageryLayer imageryProvider={imageryProvider}/> 
-        <CameraFlyTo destination={position} orientation={orientation}/>
+
+        
+          {entities.length > 0 ? <> 
+
+          <CustomDataSource name='drones'> {/* same as entity Collection */}
+          
+          {entities.map((entity:any,i:number) => {
+
+            return <Entity key={i} 
+                           name={entity}
+                           description={"EntityId " + entity + "</br> </br> Futur Drone Feed"}
+                           position={Cartesian3.fromDegrees(139, 35.0, 1000)}
+                           point={{ pixelSize: 30, color:Color.BLUE }} /> 
+                   })
+          }
+          
+          </CustomDataSource>
+            
+           </> : null}
+
+        <CameraFlyTo once={true} destination={position} orientation={orientation}/>
+        <MenuBar changeLayer={changeLayer} imageryList={imageryList}/>
     </Viewer>
 
-    {/* <MqttComponent/> */}
-    {/*<OvenPlayerComponent/>*/}
+    { <MqttComponent entities={entities} setEntities={setEntities}/> }
+    {<OvenPlayerComponent/>}
     </>
   )
 }
@@ -136,14 +167,18 @@ function MqttComponent(props:any)
                   const parts = topic.split('/')
                   const entityId = parts[2];
                   // test if entityId already present
-                  console.log(props)
+
                   if (props.entities.filter((entity:string) => entity == entityId).length == 0)
                   {
+                    //Dispatch the new entity into viewer
                     props.setEntities([...props.entities, entityId]);
                   }
-               
+                  else
+                  {
+                    //EntityId already existed on viewer, we should just update payload data....
+
+                  }
               }
-                  //display entity
           })
 
       } 
@@ -165,7 +200,7 @@ function MqttComponent(props:any)
 
 
 
-{/*function OvenPlayerComponent()
+function OvenPlayerComponent()
 {
   
   const player = OvenPlayer.create('vp', {
@@ -201,5 +236,5 @@ function MqttComponent(props:any)
 
   return <></>
 }
-*/}
+
 export default App
