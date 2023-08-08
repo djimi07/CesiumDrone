@@ -5,18 +5,20 @@ import {  useRef, useState, useEffect } from 'react'
 import './App.css'
 
 import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef, Entity, CustomDataSource} from "resium";
-import { Cartesian3, UrlTemplateImageryProvider, Credit, Color, OpenStreetMapImageryProvider, Viewer as CesiumViewer, ImageryLayer as ImageryLayerCesium } from "cesium";
+import { Cartesian3, UrlTemplateImageryProvider, Credit, Color, HorizontalOrigin, VerticalOrigin, OpenStreetMapImageryProvider, Viewer as CesiumViewer, ImageryLayer as ImageryLayerCesium, Cartesian2 } from "cesium";
 import * as mqtt from 'mqtt';
 import OvenPlayer from 'ovenplayer';
 import MenuBar from './Components/MenuBar';
+import { add_or_update_entity } from './actions/add_or_update_entity';
+import { useDispatch, useSelector } from 'react-redux';
 
 function App() {
 
   //Cesium Viewer instance captured here
   const ref = useRef<CesiumComponentRef<CesiumViewer>>(null);
 
-  //Save entities here (drones)
-  const [entities, setEntities] = useState<any>([]);
+  //get entities state from redux
+  const entities = useSelector((state:any) => state.entities);
 
   //List of tagged layers (use identifiers of your choice)
   const imageryList:string[] = [
@@ -70,7 +72,6 @@ function changeLayer(layer:string)
       break;
   }
 }
-console.log(entities)
 
   return (<>
 
@@ -85,10 +86,21 @@ console.log(entities)
           {entities.map((entity:any,i:number) => {
 
             return <Entity key={i} 
-                           name={entity}
-                           description={"EntityId " + entity + "</br> </br> Futur Drone Feed"}
-                           position={Cartesian3.fromDegrees(139, 35.0, 1000)}
-                           point={{ pixelSize: 30, color:Color.BLUE }} /> 
+                          name={entity.serial.substr(entity.serial.length - 5)}
+                          id={entity.serial}
+                          description={"Timestamp:"+entity.payload.timestamp+ "<br>Height:"+entity.payload.data.elevation+ "<br>Battery:"+entity.payload.data.battery.capacity_percent+ "<br>Heading:"+entity.payload.gimbal_yaw}
+                          position={Cartesian3.fromDegrees(entity.payload.data.longitude, entity.payload.data.latitude, entity.payload.data.elevation)}
+                          point={{ pixelSize: 30, color:Color.RED, outlineColor:Color.BLACK, outlineWidth:1  }}
+                          label={{
+                              text: entity.serial,
+                              showBackground:true,
+                              fillColor: Color.WHITE,
+                              backgroundColor: Color.BLACK.withAlpha(0.7),
+                              horizontalOrigin: HorizontalOrigin.CENTER,
+                              verticalOrigin: VerticalOrigin.TOP,
+                              pixelOffset: new Cartesian2(0, 10),
+                              scale: .5,
+                           }} /> 
                    })
           }
           
@@ -100,7 +112,7 @@ console.log(entities)
         <MenuBar changeLayer={changeLayer} imageryList={imageryList}/>
     </Viewer>
 
-    { <MqttComponent entities={entities} setEntities={setEntities}/> }
+    { <MqttComponent/> }
     {<OvenPlayerComponent/>}
     </>
   )
@@ -108,14 +120,20 @@ console.log(entities)
 
 
 
-function MqttComponent(props:any)
+
+
+function MqttComponent()
 {
     const [client, setClient] = useState<any>(null);
     const [connected, setConnected] = useState<boolean>(false);
-    
-    const connectUrl = 'wss://broker.emqx.io:8084/mqtt';
 
-    const options : { clean:boolean, connectTimeout:number, clientId:string, username:string, password:string   } = {
+    const dispatch = useDispatch();
+    
+    //const connectUrl = 'wss://broker.emqx.io:8084/mqtt';
+    const connectUrl = 'wss://unmannedar.com/mqttws';
+    
+
+    /*const options : { clean:boolean, connectTimeout:number, clientId:string, username:string, password:string   } = {
         // Clean session
         clean : true,
         connectTimeout: 4000,
@@ -123,7 +141,13 @@ function MqttComponent(props:any)
         clientId: 'emqx_test',
         username: 'emqx_test',
         password: 'emqx_test',
-    };
+    };*/
+
+
+    const options = {
+      clean: true,
+      connectTimeout: 4000,
+    }
 
     const mqttConnect = async () => {
 
@@ -136,13 +160,12 @@ function MqttComponent(props:any)
     useEffect(() => {
       
       if (client) { 
-        console.log('salut')
 
           client.on('connect', () => {
           console.log('Connected')
           client.subscribe('thing/product/+/osd', function (err:any) {
               if (!err) {
-                   client.publish('thing/product/1581F5FHD232N0034DFFF/osd', 'payload')
+                   //client.publish('thing/product/1581F5FHD232N0034DFFF/osd', 'payload')
                  }
                  else
                  {
@@ -162,29 +185,41 @@ function MqttComponent(props:any)
 
           client.on('message', (topic:string, message:any) => {
 
-              console.log('receive message：', topic, message.toString());
+              //console.log('receive message：', topic, message.toString());
               if (topic.includes("15")) {
                   const parts = topic.split('/')
-                  const entityId = parts[2];
-                  // test if entityId already present
-
-                  if (props.entities.filter((entity:string) => entity == entityId).length == 0)
-                  {
-                    //Dispatch the new entity into viewer
-                    props.setEntities([...props.entities, entityId]);
-                  }
-                  else
-                  {
-                    //EntityId already existed on viewer, we should just update payload data....
-
-                  }
+                  const serial = parts[2];
+                  decodeandset(serial,message.toString());
               }
           })
 
       } 
 
     }, [connected]);
+
     
+    function decodeandset(serial:string, payload:string)
+    {
+      const telm:any = JSON.parse(payload);
+      let gimbal_yaw = 0;
+      for (const key in telm.data)
+      {
+         if (telm.data[key].gimbal_yaw !== undefined)
+         {
+             gimbal_yaw = Math.trunc(telm.data[key].gimbal_yaw);
+             telm.gimbal_yaw = gimbal_yaw;
+             break;
+         }
+      }
+      console.log('hi')
+
+      //resium react allow dynamic rendering so no need to call viewer instance to add entities
+      //dispatch the payload received into the reducer// reducer will handle logics
+      dispatch(add_or_update_entity({serial:serial, payload:telm}))
+      console.log('hi2')
+      
+    }
+
 
     useEffect(() => {
 
@@ -200,7 +235,7 @@ function MqttComponent(props:any)
 
 
 
-function OvenPlayerComponent()
+ function OvenPlayerComponent()
 {
   
   const player = OvenPlayer.create('vp', {
@@ -235,6 +270,6 @@ function OvenPlayerComponent()
       });
 
   return <></>
-}
+} 
 
 export default App
