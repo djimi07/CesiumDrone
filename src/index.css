@@ -160,3 +160,14 @@ button {
 {
   color: #6ea1d1;
 }
+
+/* ------- */
+
+.tooltip_div
+{
+  position: absolute;
+}
+.tooltip_span
+{
+  
+}

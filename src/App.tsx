@@ -1,16 +1,16 @@
 
-
 import {  useRef, useState, useEffect } from 'react'
 
 import './App.css'
 
-import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef, Entity, CustomDataSource} from "resium";
-import { Cartesian3, UrlTemplateImageryProvider, Credit, Color, HorizontalOrigin, VerticalOrigin, OpenStreetMapImageryProvider, Viewer as CesiumViewer, ImageryLayer as ImageryLayerCesium, Cartesian2 } from "cesium";
+import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef, CustomDataSource, Entity, BillboardGraphics, CesiumMovementEvent, EventTarget} from "resium";
+import { Cartesian3, UrlTemplateImageryProvider, Credit, OpenStreetMapImageryProvider, Viewer as CesiumViewer, ImageryLayer as ImageryLayerCesium, Cartesian2, createWorldImageryAsync, IonWorldImageryStyle, Entity as CesiumEntity, SceneTransforms } from "cesium";
 import * as mqtt from 'mqtt';
 import OvenPlayer from 'ovenplayer';
 import MenuBar from './Components/MenuBar';
 import { add_or_update_entity } from './actions/add_or_update_entity';
 import { useDispatch, useSelector } from 'react-redux';
+import Drone from './assets/drone.png';
 
 function App() {
 
@@ -20,10 +20,17 @@ function App() {
   //get entities state from redux
   const entities = useSelector((state:any) => state.entities);
 
+  //Make ref for entities state redux
+  const DronesCollection = useRef<any>(null);
+      
+
   //List of tagged layers (use identifiers of your choice)
   const imageryList:string[] = [
-    'layer1',
-    'layer2'
+    'Mieurne Mono',
+    'Street Map',
+    'Bing maps arial',
+    'Bing Maps Aerial with Labels',
+    'Bing Maps Road'
   ]
 
   //Initiate default Layer
@@ -43,13 +50,15 @@ function App() {
 //Function callback that handle layer changing
 function changeLayer(layer:string)
 {
-  const viewer = ref.current?.cesiumElement;
+  const viewer:any = ref.current?.cesiumElement;
+
+  //viewer?.entities.collectionChanged.addEventListener(function(e:any){console.log(e)})
 
   viewer?.imageryLayers.removeAll();
 
   switch (layer) {
 
-    case 'layer1':{
+    case 'Mieurne Mono':{
       const imageryProvider = new UrlTemplateImageryProvider({
         url: 'https://tile.mierune.co.jp/mierune_mono/{z}/{x}/{y}.png',
         credit: new Credit("Maptiles by <a href='http://mierune.co.jp' target='_blank'>MIERUNE</a>, under CC BY. Data by <a href='http://osm.org/copyright' target='_blank'>OpenStreetMap</a> contributors, under ODbL.")
@@ -59,19 +68,155 @@ function changeLayer(layer:string)
       break;
     }
 
-    case 'layer2':{
+    case 'Street Map':{
         const imageryLayer = new ImageryLayerCesium(new OpenStreetMapImageryProvider({
             url: "https://tile.openstreetmap.org/"
         }), {})
 
-    viewer?.imageryLayers.add(imageryLayer);
+        viewer?.imageryLayers.add(imageryLayer);
       break;
     }
-  
+
+    case 'Bing maps arial':{
+        try{
+          (async()=>{
+            const imagery_provider:any = await createWorldImageryAsync();
+            viewer.imageryLayers.addImageryProvider(imagery_provider)
+          })()
+        }
+        catch
+        {
+          break;
+        }
+        break;
+      }
+      case 'Bing Maps Aerial with Labels':{
+        try{
+          (async()=>{
+            const imagery_provider:any = await createWorldImageryAsync({style: IonWorldImageryStyle.AERIAL_WITH_LABELS});
+            viewer.imageryLayers.addImageryProvider(imagery_provider)
+          })()
+        }
+        catch
+        {
+          break;
+        }
+        break;
+      }
+      case 'Bing Maps Road':{
+        try{
+          (async()=>{
+            const imagery_provider:any = await createWorldImageryAsync({style: IonWorldImageryStyle.ROAD});
+            viewer.imageryLayers.addImageryProvider(imagery_provider)
+
+            /*const osm_buildings:any = await createOsmBuildingsAsync();
+            viewer.scene.primitives.add(osm_buildings)*/
+
+          })()
+        }
+        catch
+        {
+          break;
+        }
+        break;
+      }
     default:
       break;
   }
 }
+
+//Function callback that Tooltip displaying on entities
+function EntityToolTip(entity?:CesiumEntity)
+{
+
+    if (ref.current && ref.current.cesiumElement && DronesCollection && DronesCollection.current)
+    {
+        const viewer = ref.current.cesiumElement;
+
+        if (viewer.container.getAttribute('listener') != 'true')
+        {
+            viewer.container.setAttribute('listener', 'true');
+
+            const scratch3dPosition = new Cartesian3();
+            const scratch2dPosition = new Cartesian2();
+
+            console.log('event fired')
+
+            viewer.clock.onTick.addEventListener(function(clock) {
+
+                const entities:any = DronesCollection.current.cesiumElement._entityCollection._entities._array;
+
+                //console.log(entities)
+
+                if (entities.length > 0)
+                {
+                    entities.forEach((entity:any) => {
+                        let position3d;
+                        let position2d;
+
+                        //check if tooltip already exist
+                        let tooltip = document.getElementById(entity._id);
+                        let isEntityVisible = true;
+
+                        if (!tooltip)
+                        {
+                            tooltip = document.createElement('div');
+                            tooltip.innerHTML = '<span class=\'tooltip_span\'>' + entity._id +'</span>';
+                            tooltip.id = entity._id;
+                            tooltip.className = 'tooltip_div';
+                            viewer.container.appendChild(tooltip);
+                        }
+                    
+                        if (entity.position)
+                        {
+                            position3d = entity.position.getValue(clock.currentTime, scratch3dPosition);
+                        }
+
+                        if (position3d)
+                        {
+                            position2d = SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, position3d, scratch2dPosition);
+                        }
+
+                        if (position2d)
+                        {
+                            // entity present in map
+                            tooltip.style.left = (position2d.x + 10) + 'px';
+                            tooltip.style.top = (position2d.y - 40) + 'px';
+                      
+                            // Reveal HTML when entity comes on screen
+                            if (!isEntityVisible)
+                            {
+                                isEntityVisible = true;
+                                tooltip.style.display = 'block';
+                            }
+                        }
+                        else if (isEntityVisible)
+                        {
+                            // Hide HTML when entity goes off screen or loses its position.
+                            isEntityVisible = false;
+                            tooltip.style.display = 'none';
+                        }
+                    
+                  });
+                }
+            })
+        }  
+}
+
+    else
+    {
+        console.log('Event not fired')
+        setTimeout(EntityToolTip,1000);
+    }
+  
+}
+
+useEffect(()=>{
+
+  EntityToolTip();
+
+  
+},[])
 
   return (<>
 
@@ -81,26 +226,18 @@ function changeLayer(layer:string)
         
           {entities.length > 0 ? <> 
 
-          <CustomDataSource name='drones'> {/* same as entity Collection */}
+          <CustomDataSource ref={DronesCollection} name='Drones'> {/* same as entity Collection */}
           
           {entities.map((entity:any,i:number) => {
 
-            return <Entity key={i} 
+            return <Entity key={i}
                           name={entity.serial.substr(entity.serial.length - 5)}
                           id={entity.serial}
                           description={"Timestamp:"+entity.payload.timestamp+ "<br>Height:"+entity.payload.data.elevation+ "<br>Battery:"+entity.payload.data.battery.capacity_percent+ "<br>Heading:"+entity.payload.gimbal_yaw}
                           position={Cartesian3.fromDegrees(entity.payload.data.longitude, entity.payload.data.latitude, entity.payload.data.elevation)}
-                          point={{ pixelSize: 30, color:Color.RED, outlineColor:Color.BLACK, outlineWidth:1  }}
-                          label={{
-                              text: entity.serial,
-                              showBackground:true,
-                              fillColor: Color.WHITE,
-                              backgroundColor: Color.BLACK.withAlpha(0.7),
-                              horizontalOrigin: HorizontalOrigin.CENTER,
-                              verticalOrigin: VerticalOrigin.TOP,
-                              pixelOffset: new Cartesian2(0, 10),
-                              scale: .5,
-                           }} /> 
+                          > 
+                          <BillboardGraphics image={Drone} scale={0.1} />
+                    </Entity> 
                    })
           }
           
@@ -113,12 +250,10 @@ function changeLayer(layer:string)
     </Viewer>
 
     { <MqttComponent/> }
-    {<OvenPlayerComponent/>}
+    {/*<OvenPlayerComponent/>*/}
     </>
   )
 }
-
-
 
 
 
@@ -211,12 +346,10 @@ function MqttComponent()
              break;
          }
       }
-      console.log('hi')
 
       //resium react allow dynamic rendering so no need to call viewer instance to add entities
       //dispatch the payload received into the reducer// reducer will handle logics
       dispatch(add_or_update_entity({serial:serial, payload:telm}))
-      console.log('hi2')
       
     }
 
