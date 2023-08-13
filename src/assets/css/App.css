@@ -1,0 +1,297 @@
+/* ---Cesium container---- */
+.cesium-viewer-bottom
+{
+  display: none;
+}
+
+.cesium-viewer-toolbar
+{
+  display: none;
+}
+
+.cesium-viewer-fullscreenContainer
+{
+  display: none !important;
+}
+
+/* ---- Sidebar icons  ---- */
+
+#side_bar_container
+{
+  background-color: #272727;
+    width: 250px;
+    position: fixed;
+    overflow: hidden;
+    top: 0px;
+    left: 0px;
+    bottom: 0px;
+    height: 100%;
+    transition: all .10s;
+}
+
+#side_bar_container #logo_col
+{
+  border-bottom: 1px #414141 solid;
+}
+
+#side_bar_container #logo_col h3
+{
+    font-weight: 300;
+    font-size: 1.2em;
+    margin: 0px;
+    color: white;
+    padding: 10px 0px 10px 0px;
+    font-weight: 400;
+}
+
+#icons_col_sidebar
+{
+  padding: 0px;
+  border-right: 1px #414141 solid;
+  width: 50px;
+}
+
+#icons_col_sidebar div
+{
+  width: 100%;
+}
+
+#icons_div_flex
+{
+  display: flex;
+  flex-direction: column;
+}
+
+#icons_div_flex span
+{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  color: white;
+}
+
+#icons_div_flex .clicked
+{
+  color: #1199d6;
+  border-right: 1px #414141 solid;
+  background-color: #0f0f0d;
+}
+
+
+#icons_div_flex span i
+{
+  
+}
+
+/*---- Side Bar Dynamic Content ----*/
+
+.accordion
+{
+  border-bottom:1px#414141 solid !important;
+}
+
+#side_bar_dynamic_content
+{
+  width: 200px;
+  padding: 0px;
+
+}
+
+#side_bar_dynamic_content #dynamic_div
+{
+  padding: 0px;
+
+}
+
+.accordion-button
+{
+  padding: 0px !important;
+  background-color: #272727 !important;
+  color: white !important;
+  box-shadow: none !important;
+}
+
+.accordion_head_span
+{
+  padding: 13px !important;
+  font-size: 14px;
+  font-weight: 200;
+}
+
+.accordion-button::after
+{
+  position: absolute !important;
+  right: 5px !important;
+  display: none !important;
+}
+
+.accordion-button i
+{
+  transition: all .1s;
+  right: 13px;
+  position: absolute;
+}
+.accordion-button.collapsed i
+{
+  transform: rotate(180deg);
+}
+
+.accordion-body
+{
+  background-color: #272727 !important;
+  color: white !important;
+  padding: 13px !important;
+}
+
+.accordion_body_span
+{
+  font-size: 13px;
+  font-weight: 200;
+}
+
+.accordion-collapse
+{
+  border-radius: 0px !important;
+}
+
+.accordion_body_list
+{
+  display: flex;
+  flex-direction: column;
+}
+
+.accordion_body_span.list
+{
+  cursor: pointer;
+  padding: 2px 0px 2px 0px;
+}
+.accordion_body_span.list.picked
+{
+  color: #1099d6;
+}
+
+/* --- Drone card div -- */
+
+.drone_card_div
+{
+  background-color: #454545;
+  width: 100%;
+  padding: 8px;
+}
+
+.drone_card_div span
+{
+  font-size: 13px;
+  font-weight: 200;
+}
+
+.serial_status_div
+{
+  padding: 5px;
+  
+}
+
+.infos_drone_div
+{
+  padding: 5px;
+  border: 1px #595959 solid;
+  background-color: #4e4e4e;
+  display: flex;
+  margin-top: 3px;
+}
+
+.infos_drone_div table
+{
+  margin: 0px;
+  padding: 0px;
+}
+
+.infos_drone_div table i
+{
+  text-align: center;
+  width: 15px;
+  height: 15px;
+}
+
+.infos_drone_div table td
+{
+  background-color: #4e4e4e;
+  padding: 0px;
+  color: white;
+}
+
+.text-right
+{
+  text-align: right;
+}
+
+/*---- Battery level *-----/*/
+
+.batteryContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: center;
+  margin-left: auto;
+  cursor: pointer;
+}
+
+.batteryOuter {
+  border-radius: 3px;
+  border: 1px solid #efefef;
+  padding: 1px;
+  width: 25px;
+  height: 11px;
+  position: relative;
+
+  justify-content: center;
+  display: flex;
+  align-items: center;
+}
+
+
+.batteryOuter span {
+  z-index: 3;
+  position: absolute;
+  font-size: 5px;
+}
+
+
+
+.batteryBump {
+  border-radius: 2px;
+  background-color: #ffffff;
+  margin: 2px;
+  width: 1px;
+  height: 3px;
+}
+
+#batteryLevel {
+  border-radius: 2px;
+  background-color: #73AD21;
+  height: 9px;
+  left: 0px;
+  position: absolute;
+  top: 0px;
+}
+
+
+
+
+/* ---OvenPlayer---- */
+
+#players_container
+{
+  position: absolute;
+  top: 50px;
+  right: 50px;
+}
+
+.player-wrapper
+{
+  width: 350px;
+}
+

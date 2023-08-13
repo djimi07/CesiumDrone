@@ -1,16 +1,18 @@
 
-import {  useRef, useState, useEffect } from 'react'
+import {  useRef, useEffect } from 'react'
 
-import './App.css'
+import './assets/css/App.css'
 
-import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef, CustomDataSource, Entity, BillboardGraphics, CesiumMovementEvent, EventTarget} from "resium";
-import { Cartesian3, UrlTemplateImageryProvider, Credit, OpenStreetMapImageryProvider, Viewer as CesiumViewer, ImageryLayer as ImageryLayerCesium, Cartesian2, createWorldImageryAsync, IonWorldImageryStyle, Entity as CesiumEntity, SceneTransforms } from "cesium";
-import * as mqtt from 'mqtt';
-import OvenPlayer from 'ovenplayer';
-import MenuBar from './Components/MenuBar';
-import { add_or_update_entity } from './actions/add_or_update_entity';
-import { useDispatch, useSelector } from 'react-redux';
+import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef, CustomDataSource, Entity, BillboardGraphics} from "resium";
+import { Cartesian3, UrlTemplateImageryProvider, Credit, OpenStreetMapImageryProvider, Viewer as CesiumViewer, ImageryLayer as ImageryLayerCesium, Cartesian2, createWorldImageryAsync, IonWorldImageryStyle, SceneTransforms } from "cesium";
+
+import {  useSelector } from 'react-redux';
+
 import Drone from './assets/drone.png';
+import OvenPlayerComponent from './Components/OvenPlayerComponent';
+import MqttComponent from './Components/MqttComponent';
+import Layout from './Layout';
+import { Tooltip, Overlay } from 'react-bootstrap';
 
 function App() {
 
@@ -19,19 +21,12 @@ function App() {
 
   //get entities state from redux
   const entities = useSelector((state:any) => state.entities);
+  const layers = useSelector((state:any) => state.layers);
 
   //Make ref for entities state redux
   const DronesCollection = useRef<any>(null);
       
-
-  //List of tagged layers (use identifiers of your choice)
-  const imageryList:string[] = [
-    'Mieurne Mono',
-    'Street Map',
-    'Bing maps arial',
-    'Bing Maps Aerial with Labels',
-    'Bing Maps Road'
-  ]
+  
 
   //Initiate default Layer
   const imageryProvider = new UrlTemplateImageryProvider({
@@ -48,7 +43,7 @@ function App() {
   //----------------------//
 
 //Function callback that handle layer changing
-function changeLayer(layer:string)
+function changeLayer()
 {
   const viewer:any = ref.current?.cesiumElement;
 
@@ -56,7 +51,7 @@ function changeLayer(layer:string)
 
   viewer?.imageryLayers.removeAll();
 
-  switch (layer) {
+  switch (layers.picked) {
 
     case 'Mieurne Mono':{
       const imageryProvider = new UrlTemplateImageryProvider({
@@ -126,9 +121,8 @@ function changeLayer(layer:string)
 }
 
 //Function callback that Tooltip displaying on entities
-function EntityToolTip(entity?:CesiumEntity)
+function EntityToolTip()
 {
-
     if (ref.current && ref.current.cesiumElement && DronesCollection && DronesCollection.current)
     {
         const viewer = ref.current.cesiumElement;
@@ -161,7 +155,7 @@ function EntityToolTip(entity?:CesiumEntity)
                         if (!tooltip)
                         {
                             tooltip = document.createElement('div');
-                            tooltip.innerHTML = '<span class=\'tooltip_span\'>' + entity._id +'</span>';
+                            tooltip.innerHTML = '<span data-bs-toggle="tooltip" data-bs-placement="top" title="This is a tooltip" class=\'tooltip_span\'>' + entity._id +'</span>';
                             tooltip.id = entity._id;
                             tooltip.className = 'tooltip_div';
                             viewer.container.appendChild(tooltip);
@@ -215,8 +209,16 @@ useEffect(()=>{
 
   EntityToolTip();
 
-  
-},[])
+},[]);
+
+useEffect(()=>{
+  changeLayer();
+
+}, [layers.picked])
+
+
+const tooltip = <Tooltip> hi </Tooltip>
+
 
   return (<>
 
@@ -245,164 +247,25 @@ useEffect(()=>{
             
            </> : null}
 
-        <CameraFlyTo once={true} destination={position} orientation={orientation}/>
-        <MenuBar changeLayer={changeLayer} imageryList={imageryList}/>
+        {/*<CameraFlyTo once={true} destination={position} orientation={orientation}/>*/}
+
+        <Layout/>
+
     </Viewer>
 
     { <MqttComponent/> }
-    {/*<OvenPlayerComponent/>*/}
+    {<OvenPlayerComponent/>}
+
+    <Overlay target={document.getElementById('players_container')} show={true} placement="top">
+        <Tooltip id="overlay-example">
+            My Tooltip
+        </Tooltip>
+    </Overlay>
+
     </>
   )
 }
 
 
-
-function MqttComponent()
-{
-    const [client, setClient] = useState<any>(null);
-    const [connected, setConnected] = useState<boolean>(false);
-
-    const dispatch = useDispatch();
-    
-    //const connectUrl = 'wss://broker.emqx.io:8084/mqtt';
-    const connectUrl = 'wss://unmannedar.com/mqttws';
-    
-
-    /*const options : { clean:boolean, connectTimeout:number, clientId:string, username:string, password:string   } = {
-        // Clean session
-        clean : true,
-        connectTimeout: 4000,
-        // Authentication
-        clientId: 'emqx_test',
-        username: 'emqx_test',
-        password: 'emqx_test',
-    };*/
-
-
-    const options = {
-      clean: true,
-      connectTimeout: 4000,
-    }
-
-    const mqttConnect = async () => {
-
-      const clientMqtt = await mqtt.connect(connectUrl, options);
-      setClient(clientMqtt);
-      setConnected(true);
-
-    }
-
-    useEffect(() => {
-      
-      if (client) { 
-
-          client.on('connect', () => {
-          console.log('Connected')
-          client.subscribe('thing/product/+/osd', function (err:any) {
-              if (!err) {
-                   //client.publish('thing/product/1581F5FHD232N0034DFFF/osd', 'payload')
-                 }
-                 else
-                 {
-                  console.log(err);
-                 }
-              })
-          });
-
-          client.on('error', (error:any) => {
-              console.log('Connection failed:', error)
-          });
-    
-
-          client.on('reconnect', () => {
-              console.log('reconnecting:...')
-          });
-
-          client.on('message', (topic:string, message:any) => {
-
-              //console.log('receive message：', topic, message.toString());
-              if (topic.includes("15")) {
-                  const parts = topic.split('/')
-                  const serial = parts[2];
-                  decodeandset(serial,message.toString());
-              }
-          })
-
-      } 
-
-    }, [connected]);
-
-    
-    function decodeandset(serial:string, payload:string)
-    {
-      const telm:any = JSON.parse(payload);
-      let gimbal_yaw = 0;
-      for (const key in telm.data)
-      {
-         if (telm.data[key].gimbal_yaw !== undefined)
-         {
-             gimbal_yaw = Math.trunc(telm.data[key].gimbal_yaw);
-             telm.gimbal_yaw = gimbal_yaw;
-             break;
-         }
-      }
-
-      //resium react allow dynamic rendering so no need to call viewer instance to add entities
-      //dispatch the payload received into the reducer// reducer will handle logics
-      dispatch(add_or_update_entity({serial:serial, payload:telm}))
-      
-    }
-
-
-    useEffect(() => {
-
-      mqttConnect();
-
-    }, []);
-
-
-    return (<> </>)
-} 
-
-
-
-
-
- function OvenPlayerComponent()
-{
-  
-  const player = OvenPlayer.create('vp', {
-    autoStart: true,
-    autoFallback:true,
-    controls:false,
-    mute:true,
-    webrtcConfig: {
-      timeoutMaxRetry:4,
-      connectionTimeout:3000
-    },
-    hlsConfig: {
-      liveSyncDuration: 1.5,
-      liveMaxLatencyDuration:3,
-      maxLiveSyncPlaybackRate:1.5
-    },
-    sources: [
-        {
-            type: 'webrtc',
-            file: 'wss://unmannedar.com/lhsswss/+key'
-        }
-    ],
-  })
-      //player.debug(true);
-
-      player.getConfig().systemText.api.error[501].message = 'No Stream. Checking in 10 seconds';
-      player.getConfig().systemText.api.error[511].message = 'No Stream. Checking in 10 seconds';
-      player.getConfig().systemText.api.error[512].message = 'No Stream.';
-      
-      player.on('error', () => {
-          //setTimeout(function(){ location.reload(); }, 10000);
-      });
-
-  return <></>
-} 
 
 export default App

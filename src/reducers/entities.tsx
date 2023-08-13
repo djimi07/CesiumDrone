@@ -6,7 +6,7 @@ interface Entity {
 const entitiesReducer = (state:Entity[] =[] , action:any) => {
 
     const state_copy = [...state];
-    console.log(state);
+    //console.log(state);
 
     switch(action.type){
 
@@ -29,6 +29,9 @@ const entitiesReducer = (state:Entity[] =[] , action:any) => {
                         entities_copy[i].payload = action.payload.payload;
                     }
                 }
+
+                
+                
             
                 return entities_copy;
             }
