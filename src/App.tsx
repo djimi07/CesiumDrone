@@ -251,16 +251,18 @@ const tooltip = <Tooltip> hi </Tooltip>
 
         <Layout/>
 
+        <Overlay target={document.getElementById('players_container')} show={true} placement="top">
+        <Tooltip id="overlay-example">
+            My Tooltip
+        </Tooltip>
+    </Overlay>
+
     </Viewer>
 
     { <MqttComponent/> }
     {<OvenPlayerComponent/>}
 
-    <Overlay target={document.getElementById('players_container')} show={true} placement="top">
-        <Tooltip id="overlay-example">
-            My Tooltip
-        </Tooltip>
-    </Overlay>
+    
 
     </>
   )
