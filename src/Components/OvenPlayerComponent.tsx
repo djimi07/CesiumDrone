@@ -1,7 +1,6 @@
 
-import {   useEffect } from 'react';
-
-
+import {   useEffect, useRef, useState } from 'react';
+import { render, createPortal } from 'react-dom';
 
 import OvenPlayer from 'ovenplayer';
 
@@ -11,35 +10,50 @@ import {  useSelector } from 'react-redux';
 
 function OvenPlayerComponent()
 {
+    const [showTopCard, setShowTopCard] = useState(false);
 
-  const entities = useSelector((state:any) => state.entities);
+    const entities = useSelector((state:any) => state.entities);
+    const ovenplayer = useSelector((state:any) => state.ovenplayer);
 
-  const players_container = document.getElementById('players_container');
+    const ref = useRef(null)
 
-  function createPlayer(id:string)
-  {
-      const player = OvenPlayer.create(id, {
-          autoStart: true,
-          autoFallback:true,
-          controls:false,
-          mute:true,
-          webrtcConfig: {
-              timeoutMaxRetry:4,
-              connectionTimeout:3000
-          },
-          hlsConfig: {
-              liveSyncDuration: 1.5,
-              liveMaxLatencyDuration:3,
-              maxLiveSyncPlaybackRate:1.5
-          },
-          sources: [
-          {
-              //type: 'webrtc',
-              //file: 'wss://unmannedar.com/lhsswss/+key'
-              type: 'dash',
-              file: 'https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd'
-          }
-          ],
+    function runPlayer(entity:any)
+    {
+        //Create the top Block of each player
+        // We need to manipulate the dom directly
+
+        const playerWrapper = document.getElementById('player-wrapper');
+
+        if (ref.current)
+        {
+            playerWrapper?.append(ref.current)
+        }
+
+        console.log(document.getElementsByClassName('top_box_player'));
+   
+
+        const player = OvenPlayer.create('vp', {
+            autoStart: true,
+            autoFallback:true,
+            controls:false,
+            mute:true,
+            webrtcConfig: {
+                timeoutMaxRetry:4,
+                connectionTimeout:3000
+            },
+            hlsConfig: {
+                liveSyncDuration: 1.5,
+                liveMaxLatencyDuration:3,
+                maxLiveSyncPlaybackRate:1.5
+            },
+            sources: [
+            {
+                //type: 'webrtc',
+                //file: 'wss://unmannedar.com/lhsswss/mood'
+                type: 'dash',
+                file: 'https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd'
+           }
+           ],
         })
 
         //player.debug(true);
@@ -55,29 +69,49 @@ function OvenPlayerComponent()
 
   useEffect(()=>{
 
+      // test if entity always disponible on entities store
       if (entities.length > 0)
       {
-          entities.forEach((entity:any) => {
+          if (entities.filter((entity:any) => entity.serial == ovenplayer.entity).length > 0)
+          {
+              //get entity data
+              const entity = entities.filter((entity:any) => entity.serial == ovenplayer.entity);
 
-             if (!document.getElementById('vp_'+entity.serial))
-             {
-               const wrapper = document.createElement("div");
-                     wrapper.className = "player-wrapper";
-                     wrapper.innerHTML = "<div id=vp_"+ entity.serial +"> </div>";
+              // payload on entity must have stream key
 
-                players_container?.appendChild(wrapper);
-
-               createPlayer('vp_'+entity.serial);
-             }
-
-          });
+            runPlayer(entity);
+            
+          }
       }
 
-  },[entities.length])
-
+  },[ovenplayer.entity])
 
  
-  return null;
+  return (<>
+      <div id="ovenplayer_top_card_div" className={showTopCard ? '' : ''}>
+
+        <div id="ovenplayer_top_card_header_div">
+            <span>Drone-15-God-Eye</span>
+            <span className='ml-auto'><i className='fas fa-times'></i></span>
+        </div>
+
+        <div id="ovenplayer_top_card_body_div">
+            <div id="b1">
+                <i className='fas fa-paper-plane'></i>
+                <span className='mt-2'>ABCDE</span>
+            </div>
+            <div id='b2'>
+                <span>Battery: 80%</span>
+                <span>Speed: 30km/h</span>
+                <span>wind: 80km/h</span>
+                <span>Signal: 80%</span>
+                <span>Wind speed: 1000 Km/h</span>
+            </div>
+        </div>
+
+      </div>
+  </>);
+
 } 
 
 

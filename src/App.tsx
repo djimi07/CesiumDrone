@@ -1,6 +1,6 @@
 
 import {  useRef, useEffect } from 'react'
-
+import { createPortal } from 'react-dom';
 import './assets/css/App.css'
 
 import { Viewer, CameraFlyTo, ImageryLayer, CesiumComponentRef, CustomDataSource, Entity, BillboardGraphics} from "resium";
@@ -25,6 +25,9 @@ function App() {
 
   //Make ref for entities state redux
   const DronesCollection = useRef<any>(null);
+
+  //get ovenplayer root
+  const ovenplayerWrapper:HTMLElement|any = document.getElementById('player-wrapper');
       
   
 
@@ -251,23 +254,24 @@ const tooltip = <Tooltip> hi </Tooltip>
 
         <Layout/>
 
-        <Overlay target={document.getElementById('players_container')} show={true} placement="top">
-        <Tooltip id="overlay-example">
-            My Tooltip
-        </Tooltip>
-    </Overlay>
-
     </Viewer>
 
     { <MqttComponent/> }
-    {<OvenPlayerComponent/>}
-
     
+    {createPortal(<OvenPlayerComponent/>, ovenplayerWrapper)}
 
     </>
   )
 }
 
 
-
 export default App
+
+
+/*
+ <Overlay target={document.getElementById('players_container')} show={true} placement="top">
+        <Tooltip id="overlay-example">
+            My Tooltip
+        </Tooltip>
+    </Overlay>
+  */

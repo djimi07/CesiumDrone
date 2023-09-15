@@ -1,5 +1,6 @@
 import entities from './entities.tsx';
 import layersReducer from './layers.tsx';
+import ovenPlayerReducer from './ovenplayer.tsx';
 
 
 
@@ -10,6 +11,7 @@ const allReducers = combineReducers({
 
     entities: entities,
     layers:layersReducer,
+    ovenplayer:ovenPlayerReducer,
 
 })
 
